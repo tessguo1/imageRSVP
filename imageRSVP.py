@@ -93,9 +93,8 @@ if quitFinder:
 numImagesInStream = 10
 numRespOptions = 4
 numImagesToPresent = 10
-SOAms =  150 #150
-#Minimum SOAms should be 84  because any shorter, I can't always notice the second ring when lag1.   71 in Martini E2 and E1b (actually he used 66.6 but that's because he had a crazy refresh rate of 90 Hz)
-imageDurMs = 150 # 80 
+SOAms =  150 
+imageDurMs = 150 
 
 ISIms = SOAms - imageDurMs
 imageDurFrames = int( np.floor(imageDurMs / (1000./refreshRate)) )
@@ -313,17 +312,18 @@ def letterToNumber(letter): #A = 0, Z = 25
 
 #print header for data file
 print('experimentPhase\ttrialnum\tsubject\ttask\t',file=dataFile,end='')
-print('noisePercent\t',end='',file=dataFile)
 if task=='T1' or task=='T2':
     numRespsWanted = 1
+    print('critDistractorArousing\totherItemsArousing\tcue1pos\tcue2lag\t',file=dataFile,end='')
 elif task=='T1T2':
     numRespsWanted = 2
+print('noisePercent\t',end='',file=dataFile)
+
 for i in range(numRespsWanted):
    dataFile.write('answerPos'+str(i)+'\t')   #have to use write to avoid ' ' between successive text, at least until Python 3
    dataFile.write('answer'+str(i)+'\t')
    dataFile.write('response'+str(i)+'\t')
    dataFile.write('correct'+str(i)+'\t')
-   dataFile.write('responsePosRelative'+str(i)+'\t')
 print('timingBlips',file=dataFile)
 #end of header
 
@@ -413,10 +413,10 @@ def drawImagesNeededForThisTrial(numImagesInStream,numRespOptions,thisTrial):
     #draw the target, same arousal as the other items
     folderIdx = 1 #target
     folder = folders[arousFolderIdx][folderIdx]
-    whichImage = random.randint(1,nImagesInFolder)
-    imageFilename = os.path.join("images",folder) + '/'  + str( whichImage ) + '.jpg'
-    print('loading image ',imageFilename)
-    targetImage = visual.ImageStim(myWin, image=imageFilename, pos=(0,0), size=imageSz, units='pix',autoLog=autoLogging)
+    targetImageWhich = random.randint(1,nImagesInFolder)
+    targetFilename = os.path.join("images",folder) + '/'  + str( targetImageWhich ) + '.jpg'
+    print('loading image ',targetFilename)
+    targetImage = visual.ImageStim(myWin, image=targetFilename, pos=(0,0), size=imageSz, units='pix',autoLog=autoLogging)
 
     #draw the critical distractor
     arousFolderIdx = thisTrial['critDistractorArousing']
@@ -426,7 +426,7 @@ def drawImagesNeededForThisTrial(numImagesInStream,numRespOptions,thisTrial):
     imageFilename = os.path.join("images",folder) + '/'  + str(whichImage) + '.jpg'
     critDistImage = visual.ImageStim(myWin, image=imageFilename, pos=(0,0), size=imageSz, units='pix',autoLog=autoLogging)
 
-    return fillerAndLineupImages, targetImage,critDistImage
+    return fillerAndLineupImages, targetImage,critDistImage,targetImageWhich
    
 #All noise dot coordinates ultimately in pixels, so can specify each dot is one pixel 
 noiseFieldWidthDeg=imageHeight *1.0
@@ -537,45 +537,6 @@ def do_RSVP_stim(fillerAndLineupImages, targetImage,critDistImage,cue1pos, cue2l
     postCueNumBlobsAway=-999 #doesn't apply to non-tracking and click tracking task
     return imageSequence,cuesPos,correctAnswers, ts  
     
-def handleAndScoreResponse(responses,responsesAutopilot,task,letterSequence,cuesPos,correctAnswers):
-    #Handle response, calculate whether correct, ########################################
-    if autopilot or passThisTrial:
-        responses = responsesAutopilot
-    
-    eachCorrect = np.zeros( len(correctAnswers) )
-    eachApproxCorrect = np.zeros( len(correctAnswers) )
-    posOfResponse = np.zeros( len(cuesPos) )
-    responsePosRelative = np.zeros( len(cuesPos) )
-    for i in range(len(cuesPos)): #score response to each cue
-        if correctAnswers[i] == letterToNumber( responses[i] ):
-            eachCorrect[i] = 1
-        posThisResponse= np.where( letterToNumber(responses[i])==letterSequence )
-        #print 'responses=',responses,'posThisResponse raw=',posThisResponse, ' letterSequence=',letterSequence #debugOFF
-        posThisResponse= posThisResponse[0] #list with potentially two entries, want first which will be array of places where the reponse was found in the letter sequence
-        if len(posThisResponse) > 1:
-            logging.error('Expected response to have occurred in only one position in stream')
-        if np.alen(posThisResponse)==0: #response not found in letter sequence
-            posThisResponse = -999
-            logging.warn('Response was not present in the stimulus stream')
-        else: 
-            posThisResponse = posThisResponse[0]
-        posOfResponse[i]= posThisResponse
-        responsePosRelative[i] = posOfResponse[i] - cuesPos[i]
-        eachApproxCorrect[i] +=   abs(responsePosRelative[i]) <= 3 #Vul efficacy measure of getting it right to within plus/minus 
-
-    for i in range(len(cuesPos)): #print response stuff to dataFile
-        #header was answerPos0, answer0, response0, correct0, responsePosRelative0
-        print(cuesPos[i],'\t', end='', file=dataFile)
-        answerCharacter = numberToLetter( letterSequence [cuesPos[i] ] )
-        print(answerCharacter, '\t', end='', file=dataFile) #answer0
-        print(responses[i], '\t', end='', file=dataFile) #response0
-        print(eachCorrect[i] , '\t', end='',file=dataFile)   #correct0
-        print(responsePosRelative[i], '\t', end='',file=dataFile) #responsePosRelative0
-
-        correct = eachCorrect.all() 
-        T1approxCorrect = eachApproxCorrect[0]
-    return correct,eachCorrect,eachApproxCorrect,T1approxCorrect,passThisTrial,expStop
-    #end handleAndScoreResponses
 
 def play_high_tone_correct_low_incorrect(correct, playIncorrect=True, passThisTrial=False):
     highA = sound.Sound('G',octave=5, sampleRate=6000, secs=.3, bits=8)
@@ -613,7 +574,7 @@ while nDoneMain < trials.nTotal and expStop==False:
     if task=="T1T2" or task=="T2":
         cue2lag = thisTrial['cue2lag']
         
-    fillerAndLineupImages, targetImage,critDistImage = drawImagesNeededForThisTrial(numImagesInStream,numRespOptions,thisTrial)
+    fillerAndLineupImages, targetImage,critDistImage,targetImageWhichN = drawImagesNeededForThisTrial(numImagesInStream,numRespOptions,thisTrial)
     
     letterSequence,cuesPos,correctAnswers,ts  = do_RSVP_stim(fillerAndLineupImages, targetImage,critDistImage,cue1pos, cue2lag, noisePercent/100.,nDoneMain)
     numCasesInterframeLong = timingCheckAndLog(ts,nDoneMain)
@@ -629,9 +590,8 @@ while nDoneMain < trials.nTotal and expStop==False:
     if not expStop:
         print('main\t', end='', file=dataFile) #first thing printed on each line of dataFile
         print(nDoneMain,'\t', end='', file=dataFile)
-        print(subject,'\t',task,'\t', round(noisePercent,3),'\t', end='', file=dataFile)
-        print(numCasesInterframeLong, file=dataFile) #timingBlips, last thing recorded on each line of dataFile
-    
+        print(subject,'\t',task,'\t', end='', file=dataFile)
+        print(thisTrial['critDistractorArousing'],'\t',thisTrial['otherItemsArousing'],'\t',cue1pos,'\t',cue2lag,'\t', round(noisePercent,3),'\t', end='', file=dataFile)    
         numTrialsCorrect += correct #so count -1 as 0
         if task=="T1T2" or task=="T2":
             cue2lagIdx = list(possibleCue2lags).index(cue2lag)
@@ -645,6 +605,16 @@ while nDoneMain < trials.nTotal and expStop==False:
              expStop=True
         core.wait(.1)
         if feedback: play_high_tone_correct_low_incorrect(correct, playIncorrect=False, passThisTrial=False)
+        
+        for i in range(len(cuesPos)): #print response stuff to dataFile
+            #header was answerPos0, answer0, response0, correct0
+            print(cuesPos[i],'\t', end='', file=dataFile)
+        answerName = targetImageWhichN
+        print(answerName, '\t', end='', file=dataFile) #answer0
+        print(responseQuadrant, '\t', end='', file=dataFile) #response0
+        print(correct, '\t', end='',file=dataFile)   #correct0
+        print(numCasesInterframeLong, file=dataFile) #timingBlips, last thing recorded on each line of dataFile
+
         nDoneMain+=1
         
         dataFile.flush(); logging.flush()
