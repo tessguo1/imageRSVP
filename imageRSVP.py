@@ -7,7 +7,7 @@ import psychopy.info
 import numpy as np
 from math import atan, log, ceil
 from copy import deepcopy
-import time, sys, os, pylab, random
+import time, sys, os, random
 try:
     from noiseStaircaseHelpers import printStaircase, toStaircase, outOfStaircase, createNoise, plotDataAndPsychometricCurve
 except ImportError:
@@ -18,6 +18,7 @@ except ImportError:
     print('Could not import imageLineupResponse.py (you need that file to be in the same directory)')
 
 imageSz = (320,240)
+lineupImagesNotInStream = False
 descendingPsycho = True
 tasks=['T1','T1T2','T2']; task = tasks[2]
 #THINGS THAT COULD PREVENT SUCCESS ON A STRANGE MACHINE
@@ -43,7 +44,7 @@ if demo:
     refreshRate = 60.;  #100
 
 threshCriterion = 0.58
-bgColor = [-.7,-.7,-.7] # [-1,-1,-1]
+bgColor = [-1,-1,-1] # [-1,-1,-1]
 cueColor = [0.,0.,1.]
 letterColor = [1.,1.,1.]
 cueRadius = 6 #6 deg, as in Martini E2    Letters should have height of 2.5 deg
@@ -311,6 +312,11 @@ def letterToNumber(letter): #A = 0, Z = 25
         return (-999)
 
 #print header for data file
+print('critDistFname\ttargetFname\t',file=dataFile,end='')
+for i in xrange(numImagesInStream-2):
+    print('fillerImage',i,sep='',file=dataFile,end='\t')
+for i in xrange(3):
+    print('lineupImage',i,sep='',file=dataFile,end='\t')
 print('experimentPhase\ttrialnum\tsubject\ttask\t',file=dataFile,end='')
 if task=='T1' or task=='T2':
     numRespsWanted = 1
@@ -334,10 +340,13 @@ def  oneFrameOfStim( n,cue1pos,cue2lag,cue,imageSequence,cueDurFrames,imageDurFr
   SOAframes = imageDurFrames+ISIframes
   cueFrames = cuesPos*SOAframes  #cuesPos is global variable
   imageN = int( np.floor(n/SOAframes) )
+  if imageN >   numImagesInStream:
+    print('ERROR asking for ',imageN, ' but only ',numImagesInStream,' desired in stream')
+
   frameOfThisImage = n % SOAframes #every SOAframes, new letter
   showImage = frameOfThisImage < imageDurFrames #if true, it's not time for the blank ISI.  it's still time to draw the letter
+  thisImageIdx = imageN
   #print 'n=',n,' SOAframes=',SOAframes, ' letterDurFrames=', letterDurFrames, ' (n % SOAframes) =', (n % SOAframes)  #DEBUGOFF
-  thisImageIdx = imageN 
   #so that any timing problems occur just as often for every frame, always draw the letter and the cue, but simply draw it in the bgColor when it's not meant to be on
   cue.setLineColor( bgColor )
   for cueFrame in cueFrames: #check whether it's time for any cue
@@ -350,6 +359,10 @@ def  oneFrameOfStim( n,cue1pos,cue2lag,cue,imageSequence,cueDurFrames,imageDurFr
     elif imageN == cue1pos + cue2lag:
         targetImage.draw()
     else:
+        if imageN > cue1pos:
+            thisImageIdx -= 1  #critical distractor was drawn separately, doesn't count toward nth item to take out of the fillerandLineup
+        if imageN> cue1pos+cue2lag:
+            thisImageIdx -= 1  #target was drawn separately, doesn't count toward nth item to take out of the fillerandLineup
         fillerAndLineupImages[thisImageIdx].draw()
     #if/then statements for what item to draw
   else:
@@ -384,7 +397,7 @@ cue = visual.Rect(myWin,
 imageHeight = 240; imageWidth = 320
 
 def drawImagesNeededForThisTrial(numImagesInStream,numRespOptions,thisTrial):
-    fillerAndLineupImages = list()
+    fillerAndLineupImages = list();     fillerAndLineupImageNames = list()
     #6 folders
     #arousing/non-arousing x critDistr,target,filler
     folders = [  ["calmCritDist","calmTarget","calmFiller"] ,
@@ -394,11 +407,15 @@ def drawImagesNeededForThisTrial(numImagesInStream,numRespOptions,thisTrial):
     #filler folder has 150 fillers
     nImagesInFolder = 48
     nImagesInFolderFillers = 150
+    
     #draw the filler items. also the lineup items, as they are from same folder as the filler items
     arousFolderIdx = thisTrial['otherItemsArousing']
     folderIdx = 2
     folder = folders[arousFolderIdx][folderIdx]
-    numImages = numImagesInStream-2 + numRespOptions-1
+    if lineupImagesNotInStream:
+        numImages = numImagesInStream-2 + numRespOptions-1
+    else:
+        numImages = numImagesInStream-2 
     imageNumList = np.arange(1,nImagesInFolderFillers)
     np.random.shuffle(imageNumList)
     imageNumList = imageNumList[0:numImages]
@@ -409,13 +426,15 @@ def drawImagesNeededForThisTrial(numImagesInStream,numRespOptions,thisTrial):
        print('loading image ',imageFilename)
        image = visual.ImageStim(myWin, image=imageFilename, pos=(0,0), size=imageSz, units='pix',autoLog=autoLogging)
        fillerAndLineupImages.append(image)
-       
+       fillerAndLineupImageNames.append(imageNum)
     #draw the target, same arousal as the other items
     folderIdx = 1 #target
     folder = folders[arousFolderIdx][folderIdx]
     targetImageWhich = random.randint(1,nImagesInFolder)
     targetFilename = os.path.join("images",folder) + '/'  + str( targetImageWhich ) + '.jpg'
-    print('loading image ',targetFilename)
+    print(targetImageWhich,'\t', end='', file=dataFile) #print target name to datafile
+
+    #print('loading image ',targetFilename)
     targetImage = visual.ImageStim(myWin, image=targetFilename, pos=(0,0), size=imageSz, units='pix',autoLog=autoLogging)
 
     #draw the critical distractor
@@ -424,9 +443,11 @@ def drawImagesNeededForThisTrial(numImagesInStream,numRespOptions,thisTrial):
     folder = folders[arousFolderIdx][folderIdx]
     whichImage = random.randint(1,nImagesInFolder)
     imageFilename = os.path.join("images",folder) + '/'  + str(whichImage) + '.jpg'
+    print(whichImage,'\t', end='', file=dataFile) #print crit distractor to datafile
+
     critDistImage = visual.ImageStim(myWin, image=imageFilename, pos=(0,0), size=imageSz, units='pix',autoLog=autoLogging)
 
-    return fillerAndLineupImages, targetImage,critDistImage,targetImageWhich
+    return fillerAndLineupImages, fillerAndLineupImageNames, targetImage,critDistImage,targetImageWhich
    
 #All noise dot coordinates ultimately in pixels, so can specify each dot is one pixel 
 noiseFieldWidthDeg=imageHeight *1.0
@@ -475,7 +496,7 @@ numTrialsEachApproxCorrect= np.zeros( numRespsWanted )
 nTrialsCorrectT2eachLag = np.zeros(len(possibleCue2lags)); nTrialsEachLag = np.zeros(len(possibleCue2lags))
 nTrialsApproxCorrectT2eachLag = np.zeros(len(possibleCue2lags));
 
-def do_RSVP_stim(fillerAndLineupImages, targetImage,critDistImage,cue1pos, cue2lag, proportnNoise,trialN):
+def do_RSVP_stim(fillerAndLineupImages,imageSequence, targetImage,critDistImage,cue1pos, cue2lag, proportnNoise,trialN):
     #relies on global variables:
     #   logging, bgColor
     #
@@ -488,8 +509,6 @@ def do_RSVP_stim(fillerAndLineupImages, targetImage,critDistImage,cue1pos, cue2l
         cuesPos.append(cue1pos+cue2lag)
 
     cuesPos = np.array(cuesPos)
-    imageSequence = np.arange(0,10)
-    np.random.shuffle(imageSequence)
     correctAnswers = np.array( imageSequence[cuesPos] )
     noise = None; allFieldCoords=None; numNoiseDots=0
     if proportnNoise > 0: #generating noise is time-consuming, so only do it once per trial. Then shuffle noise coordinates for each image
@@ -574,13 +593,28 @@ while nDoneMain < trials.nTotal and expStop==False:
     if task=="T1T2" or task=="T2":
         cue2lag = thisTrial['cue2lag']
         
-    fillerAndLineupImages, targetImage,critDistImage,targetImageWhichN = drawImagesNeededForThisTrial(numImagesInStream,numRespOptions,thisTrial)
-    
-    letterSequence,cuesPos,correctAnswers,ts  = do_RSVP_stim(fillerAndLineupImages, targetImage,critDistImage,cue1pos, cue2lag, noisePercent/100.,nDoneMain)
+    fillerAndLineupImages, fillerAndLineupImageNames, targetImage,critDistImage,targetImageWhichN = drawImagesNeededForThisTrial(numImagesInStream,numRespOptions,thisTrial)
+    imageSequence = np.arange(0,numImagesInStream-2) #not including the critical distractor and the target
+    np.random.shuffle(imageSequence)
+    #print out the filler image filenames, in order
+    for i in xrange(len(fillerAndLineupImageNames)):
+        imageIname = fillerAndLineupImageNames[  imageSequence[i] ]
+        print(imageIname,'\t', end='', file=dataFile)
+        
+    letterSequence,cuesPos,correctAnswers,ts  = do_RSVP_stim(fillerAndLineupImages, imageSequence, targetImage,critDistImage,cue1pos, cue2lag, noisePercent/100.,nDoneMain)
     numCasesInterframeLong = timingCheckAndLog(ts,nDoneMain)
     
     responses = list(); responsesAutopilot = list();
-    lineupImages = fillerAndLineupImages[-3:]
+    lineupImageIdxs = np.arange( numImagesInStream-2 )
+    np.random.shuffle(lineupImageIdxs)
+    lineupImageIdxs = lineupImageIdxs[:3]
+    lineupImages = list()
+    for i in xrange(3): #assign random sequence of lineup images and print lineup image fnames
+        lineupImages.append(  fillerAndLineupImages[ lineupImageIdxs[i] ]  )
+        print(fillerAndLineupImageNames[ lineupImageIdxs[i] ], end='\t', file=dataFile) #first thing printed on each line of dataFile
+    
+    #print('fillerAndLineupImages=',fillerAndLineupImages,' last 3 for lineup=',fillerAndLineupImages[-3:])
+    #lineupImages = fillerAndLineupImages[-3:]
     expStop,responseQuadrant,targetQuadrant,autopilotQuadrant = imageLineupResponse.drawChoiceArrayAndCollectResponse(targetImage, lineupImages, clickSound,myMouse, myWin,imageSz, expStop)
     if autopilot:
         correct = (autopilotQuadrant == targetQuadrant)
@@ -621,7 +655,7 @@ while nDoneMain < trials.nTotal and expStop==False:
         print('nDoneMain=', nDoneMain,' trials.nTotal=',trials.nTotal) #' trials.thisN=',trials.thisN
         if (trials.nTotal > 6 and nDoneMain > 2 and nDoneMain %
              ( trials.nTotal*pctCompletedBreak/100. ) ==1):  #dont modulus 0 because then will do it for last trial
-                nextText.setText('Press "SPACE" to continue!')
+                nextText.setText('Click the mouse to continue!')
                 nextText.draw()
                 progressMsg = 'Completed ' + str(nDoneMain) + ' of ' + str(trials.nTotal) + ' trials'
                 NextRemindCountText.setText(progressMsg)
@@ -631,8 +665,11 @@ while nDoneMain < trials.nTotal and expStop==False:
                 while waiting:
                    if autopilot: break
                    elif expStop == True:break
+                   mouse1, mouse2, mouse3 = myMouse.getPressed()
+                   if mouse1 or mouse2 or mouse3:
+                        waiting = False
                    for key in event.getKeys():      #check if pressed abort-type key
-                         if key in ['space','ESCAPE']: 
+                         if key in ['ESCAPE']: 
                             waiting=False
                          if key in ['ESCAPE']:
                             expStop = False
