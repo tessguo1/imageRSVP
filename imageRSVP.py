@@ -46,7 +46,11 @@ if demo:
 
 threshCriterion = 0.58
 bgColor = [-1,-1,-1] # [-1,-1,-1]
-cueColor = [0.,0.,1.]
+targetCueColor = [0.,0.,1.]
+distractorCuePossibleColors =  [ [1,1,0], #yellow
+                                                    [0,1,0], #green
+                                                    [1,.5,0]  #orange
+                                                    ] 
 letterColor = [1.,1.,1.]
 cueRadius = 6 #6 deg, as in Martini E2    Letters should have height of 2.5 deg
 
@@ -334,12 +338,15 @@ for i in range(numRespsWanted):
 print('timingBlips',file=dataFile)
 #end of header
 
-def  oneFrameOfStim( n,cue1pos,cue2lag,cue,imageSequence,cueDurFrames,imageDurFrames,ISIframes,cuesPos,
+def  oneFrameOfStim( n,task,distractorCueColor,cue1pos,cue2lag,cue,imageSequence,cueDurFrames,imageDurFrames,ISIframes,targetsPos,
                                        noise,proportnNoise,allFieldCoords,numNoiseDots,
                                        fillerAndLineupImages, targetImage,  critDistImage): 
 #defining a function to draw each frame of stim. So can call second time for tracking task response phase
   SOAframes = imageDurFrames+ISIframes
-  cueFrames = cuesPos*SOAframes  #cuesPos is  variable
+  cueFrames =list( targetsPos*SOAframes  )#targetsPos is  variable
+  if task=='T2': #Katherine's 2nd experiment, the oddball distractor is highlighted with a colored rectangle
+    distractorFrame = cue1pos*SOAframes
+    cueFrames.append(distractorFrame) #oddball in Katherine's E2
   imageN = int( np.floor(n/SOAframes) )
   if imageN >   numImagesInStream:
     print('ERROR asking for ',imageN, ' but only ',numImagesInStream,' desired in stream')
@@ -350,9 +357,14 @@ def  oneFrameOfStim( n,cue1pos,cue2lag,cue,imageSequence,cueDurFrames,imageDurFr
   #print 'n=',n,' SOAframes=',SOAframes, ' letterDurFrames=', letterDurFrames, ' (n % SOAframes) =', (n % SOAframes)  #DEBUGOFF
   #so that any timing problems occur just as often for every frame, always draw the letter and the cue, but simply draw it in the bgColor when it's not meant to be on
   cue.setLineColor( bgColor )
+  print('distractorFrame=',distractorFrame,'cueFrames=',cueFrames, 'distractorCueColor=',distractorCueColor)
   for cueFrame in cueFrames: #check whether it's time for any cue
-      if n>=cueFrame and n<cueFrame+cueDurFrames:
-         cue.setLineColor( cueColor )
+    if n>=cueFrame and n<cueFrame+cueDurFrames: #time for the target
+        if cueFrame == distractorFrame: #pick a random one of the distractorCuePossibleColors (Katherine E2)
+            cueColor = distractorCueColor
+        else:
+            cueColor =  targetCueColor
+        cue.setLineColor( cueColor )
 
   if showImage:
     if imageN == cue1pos:
@@ -382,12 +394,12 @@ def  oneFrameOfStim( n,cue1pos,cue2lag,cue,imageSequence,cueDurFrames,imageDurFr
 # #######End of function definition that displays the stimuli!!!! #####################################
 #############################################################################################################################
 
+cueLineWidth = 60
 cue = visual.Rect(myWin, 
-                 width=324,
-                 height=244,
+                 width=320+cueLineWidth*2,
+                 height=240+cueLineWidth*2,
                  lineColorSpace = 'rgb',
-                 lineColor=cueColor,
-                 lineWidth=30.0, #in pixels
+                 lineWidth=cueLineWidth, #in pixels
                  units = 'pix',
                  fillColor=None, #beware, with convex shapes fill colors don't work
                  pos= [0,0], #the anchor (rotation and vertices are position with respect to this)
@@ -558,16 +570,16 @@ def do_RSVP_stim(fillerAndLineupImages,imageSequence, targetImage,critDistImage,
     #relies on  variables:
     #   logging, bgColor
     #
-    cuesPos = [] #will contain the positions of all the cues (targets)
+    targetsPos = [] #will contain the positions of all the cues (targets)
     if task=='T1':
-        cuesPos.append(cue1pos)
+        targetsPos.append(cue1pos)
     if task=='T1T2':
-        cuesPos.append(cue1pos+cue2lag)
+        targetsPos.append(cue1pos+cue2lag)
     if task == 'T2':
-        cuesPos.append(cue1pos+cue2lag)
+        targetsPos.append(cue1pos+cue2lag)
 
-    cuesPos = np.array(cuesPos)
-    correctAnswers = np.array( imageSequence[cuesPos] )
+    targetsPos = np.array(targetsPos)
+    correctAnswers = np.array( imageSequence[targetsPos] )
     noise = None; allFieldCoords=None; numNoiseDots=0
     if proportnNoise > 0: #generating noise is time-consuming, so only do it once per trial. Then shuffle noise coordinates for each image
         (noise,allFieldCoords,numNoiseDots) = createNoise(proportnNoise,myWin,noiseFieldWidthPix, bgColor)
@@ -593,9 +605,11 @@ def do_RSVP_stim(fillerAndLineupImages,imageSequence, targetImage,critDistImage,
         myWin.flip()  #end fixation interval
     #myWin.setRecordFrameIntervals(True);  #can't get it to stop detecting superlong frames
     t0 = trialClock.getTime()
-
+    random.shuffle(distractorCuePossibleColors) #for Katherine's E2 that uses a cue around the irrelvant oddball, of a random color
+    distractorCueColor = distractorCuePossibleColors[0]
+    print('distractorCueColor=',distractorCueColor)
     for n in range(trialDurFrames): #this is the loop for this trial's stimulus!
-        worked = oneFrameOfStim( n,cue1pos,cue2lag,cue,imageSequence,cueDurFrames,imageDurFrames,ISIframes,cuesPos,
+        worked = oneFrameOfStim( n,task,distractorCueColor,cue1pos,cue2lag,cue,imageSequence,cueDurFrames,imageDurFrames,ISIframes,targetsPos,
                                                      noise,proportnNoise,allFieldCoords,numNoiseDots,
                                                      fillerAndLineupImages, targetImage,  critDistImage) #draw image and possibly cue and noise on top
         if exportImages:
@@ -612,7 +626,7 @@ def do_RSVP_stim(fillerAndLineupImages,imageSequence, targetImage,critDistImage,
         respPromptStim.setText('Which two images were circled?',log=False)
     else: respPromptStim.setText('Error: unexpected task',log=False)
     postCueNumBlobsAway=-999 #doesn't apply to non-tracking and click tracking task
-    return imageSequence,cuesPos,correctAnswers, ts  
+    return imageSequence,targetsPos,correctAnswers, ts  
     
 
 def play_high_tone_correct_low_incorrect(correct, playIncorrect=True, passThisTrial=False):
@@ -668,7 +682,7 @@ while nDoneMain < trials.nTotal and expStop==False:
         imageIname = fillerAndLineupImageNames[  imageSequence[i] ]
         print(imageIname,'\t', end='', file=dataFile)
         
-    letterSequence,cuesPos,correctAnswers,ts  = do_RSVP_stim(fillerAndLineupImages, imageSequence, targetImage,critDistImage,cue1pos, cue2lag, noisePercent/100.,nDoneMain)
+    letterSequence,targetsPos,correctAnswers,ts  = do_RSVP_stim(fillerAndLineupImages, imageSequence, targetImage,critDistImage,cue1pos, cue2lag, noisePercent/100.,nDoneMain)
     numCasesInterframeLong = timingCheckAndLog(ts,nDoneMain)
     
     responses = list(); responsesAutopilot = list();
@@ -707,9 +721,9 @@ while nDoneMain < trials.nTotal and expStop==False:
         core.wait(.1)
         if feedback: play_high_tone_correct_low_incorrect(correct, playIncorrect=False, passThisTrial=False)
         
-        for i in range(len(cuesPos)): #print response stuff to dataFile
+        for i in range(len(targetsPos)): #print response stuff to dataFile
             #header was answerPos0, answer0, response0, correct0
-            print(cuesPos[i],'\t', end='', file=dataFile)
+            print(targetsPos[i],'\t', end='', file=dataFile)
         answerName = targetImageWhichN
         print(answerName, '\t', end='', file=dataFile) #answer0
         print(responseQuadrant, '\t', end='', file=dataFile) #response0
