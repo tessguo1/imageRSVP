@@ -687,10 +687,10 @@ while nDoneMain < trials.nTotal and expStop==False:
     numCasesInterframeLong = timingCheckAndLog(ts,nDoneMain)
     
     responses = list(); responsesAutopilot = list();
-    #Work out which items from the stream will be the lineup ones
+    #Work out which items from the stream will be the lineup ones.  A random 3, except for excludgn the last two items ofthe stream
     lineupImageIdxs = np.arange( numImagesInStream-2 )  #Don't ever have the last two items of the stream in the lineup?
     np.random.shuffle(lineupImageIdxs)
-    lineupImageIdxs = lineupImageIdxs[:3]
+    lineupImageIdxs = lineupImageIdxs[:3] 
     lineupImages = list()
     for i in xrange(3): #assign random sequence of lineup images and print lineup image fnames
         lineupImages.append(  fillerAndLineupImages[ lineupImageIdxs[i] ]  )
