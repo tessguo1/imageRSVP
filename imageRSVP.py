@@ -356,7 +356,7 @@ def  oneFrameOfStim( n,task,distractorCueColor,cue1pos,cue2lag,cue,imageSequence
   thisImageIdx = imageN
   #print 'n=',n,' SOAframes=',SOAframes, ' letterDurFrames=', letterDurFrames, ' (n % SOAframes) =', (n % SOAframes)  #DEBUGOFF
   #so that any timing problems occur just as often for every frame, always draw the letter and the cue, but simply draw it in the bgColor when it's not meant to be on
-  cue.setLineColor( bgColor )
+  cue.setFillColor( bgColor )
   print('distractorFrame=',distractorFrame,'cueFrames=',cueFrames, 'distractorCueColor=',distractorCueColor)
   for cueFrame in cueFrames: #check whether it's time for any cue
     if n>=cueFrame and n<cueFrame+cueDurFrames: #time for the target
@@ -364,7 +364,9 @@ def  oneFrameOfStim( n,task,distractorCueColor,cue1pos,cue2lag,cue,imageSequence
             cueColor = distractorCueColor
         else:
             cueColor =  targetCueColor
-        cue.setLineColor( cueColor )
+        cue.setFillColor( cueColor )
+
+  cue.draw()
 
   if showImage:
     if imageN == cue1pos:
@@ -381,7 +383,6 @@ def  oneFrameOfStim( n,task,distractorCueColor,cue1pos,cue2lag,cue,imageSequence
   else:
    pass
 
-  cue.draw()
   refreshNoise = False #Not recommended because takes longer than a frame, even to shuffle apparently. Or may be setXYs step
   if proportnNoise>0 and refreshNoise: 
     if frameOfThisImage ==0: 
@@ -394,13 +395,12 @@ def  oneFrameOfStim( n,task,distractorCueColor,cue1pos,cue2lag,cue,imageSequence
 # #######End of function definition that displays the stimuli!!!! #####################################
 #############################################################################################################################
 
-cueLineWidth = 60
+cueLineWidth = 30
 cue = visual.Rect(myWin, 
                  width=320+cueLineWidth*2,
                  height=240+cueLineWidth*2,
-                 lineColorSpace = 'rgb',
-                 lineWidth=cueLineWidth, #in pixels
                  units = 'pix',
+                 fillColorSpace='rgb',
                  fillColor=None, #beware, with convex shapes fill colors don't work
                  pos= [0,0], #the anchor (rotation and vertices are position with respect to this)
                  interpolate=True,
@@ -429,6 +429,7 @@ def drawImagesNeededForThisTrial(numImagesInStream,numRespOptions,thisTrial):
     #target folder has 48 target images
     #distractor folder has 48 distractors
     #filler folder has 150 fillers
+    
     nImagesInFolder = 48
     nImagesInFolderFillers = 150
     
@@ -460,11 +461,11 @@ def drawImagesNeededForThisTrial(numImagesInStream,numRespOptions,thisTrial):
     folder = folders[arousFolderIdx][folderIdx]
     if lineupImagesNotInStream:
         numImages = numImagesInStream-2 + numRespOptions-1
-    else:
+    else: #lineupImages in stream, so just pick the lineup images from the same list as the stream items
         numImages = numImagesInStream-2 
     imageNumList = np.arange(1,nImagesInFolderFillers+1)
-    np.random.shuffle(imageNumList)
-    imageNumList = imageNumList[0:numImages]
+    np.random.shuffle(imageNumList) 
+    imageNumList = imageNumList[0:numImages] #Now this indicates the images in a folder, but in random order
     for imageNum in imageNumList: #plus numRespOptions because need additional ones for the lineup
        if folder == 'calmFiller':
             # if calmFillerUsage[imageNum-1]==2:
@@ -585,7 +586,7 @@ def do_RSVP_stim(fillerAndLineupImages,imageSequence, targetImage,critDistImage,
         (noise,allFieldCoords,numNoiseDots) = createNoise(proportnNoise,myWin,noiseFieldWidthPix, bgColor)
 
     preDrawStimToGreasePipeline = list() #I don't know why this works, but without drawing it I have consistent timing blip first time that draw ringInnerR for phantom contours
-    cue.setLineColor(bgColor)
+    cue.setColor(bgColor)
     preDrawStimToGreasePipeline.extend([cue])
     for stim in preDrawStimToGreasePipeline:
         stim.draw()
@@ -686,7 +687,8 @@ while nDoneMain < trials.nTotal and expStop==False:
     numCasesInterframeLong = timingCheckAndLog(ts,nDoneMain)
     
     responses = list(); responsesAutopilot = list();
-    lineupImageIdxs = np.arange( numImagesInStream-2 )
+    #Work out which items from the stream will be the lineup ones
+    lineupImageIdxs = np.arange( numImagesInStream-2 )  #Don't ever have the last two items of the stream in the lineup?
     np.random.shuffle(lineupImageIdxs)
     lineupImageIdxs = lineupImageIdxs[:3]
     lineupImages = list()
