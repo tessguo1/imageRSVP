@@ -1,3 +1,4 @@
+
 #Alex Holcombe alex.holcombe@sydney.edu.au
 #See the README.md for more information: https://github.com/alexholcombe/attentional-blink/blob/master/README.md
 #git remote add origin https://github.com/alexholcombe/attentional-blink.git
@@ -49,10 +50,10 @@ cueColor = [0.,0.,1.]
 letterColor = [1.,1.,1.]
 cueRadius = 6 #6 deg, as in Martini E2    Letters should have height of 2.5 deg
 
-widthPix= 1280 #monitor width in pixels of Agosta
-heightPix= 800 #800 #monitor height in pixels
+widthPix= 1600 #monitor width in pixels of Agosta
+heightPix= 900 #800 #monitor height in pixels
 monitorwidth = 38.7 #monitor width in cm
-scrn=0 #0 to use main screen, 1 to use external screen connected to computer
+scrn=1 #0 to use main screen, 1 to use external screen connected to computer
 fullscr=False #True to use fullscreen, False to not. Timing probably won't be quite right if fullscreen = False
 allowGUI = False
 if demo: monitorwidth = 23#18.0
@@ -338,7 +339,7 @@ def  oneFrameOfStim( n,cue1pos,cue2lag,cue,imageSequence,cueDurFrames,imageDurFr
                                        fillerAndLineupImages, targetImage,  critDistImage): 
 #defining a function to draw each frame of stim. So can call second time for tracking task response phase
   SOAframes = imageDurFrames+ISIframes
-  cueFrames = cuesPos*SOAframes  #cuesPos is global variable
+  cueFrames = cuesPos*SOAframes  #cuesPos is  variable
   imageN = int( np.floor(n/SOAframes) )
   if imageN >   numImagesInStream:
     print('ERROR asking for ',imageN, ' but only ',numImagesInStream,' desired in stream')
@@ -396,6 +397,17 @@ cue = visual.Rect(myWin,
 #predraw all images needed for this trial
 imageHeight = 240; imageWidth = 320
 
+
+#populated with 0s when the drawImages... function is called the first time. 
+#Represents the number of times an image has been used. Position in the list represents image identity, which is numeric
+calmCritDistUsage = np.array([])
+calmTargetUsage = np.array([])
+calmFillerUsage = np.array([])
+arousCritDistUsage = np.array([])
+arousTargetUsage = np.array([])
+arousFillerUsage = np.array([])
+
+
 def drawImagesNeededForThisTrial(numImagesInStream,numRespOptions,thisTrial):
     fillerAndLineupImages = list();     fillerAndLineupImageNames = list()
     #6 folders
@@ -408,6 +420,28 @@ def drawImagesNeededForThisTrial(numImagesInStream,numRespOptions,thisTrial):
     nImagesInFolder = 48
     nImagesInFolderFillers = 150
     
+    global calmCritDistUsage
+    print(calmCritDistUsage)
+    global calmTargetUsage
+    print(calmTargetUsage)
+    global calmFillerUsage
+    #print(calmFillerUsage)
+    global arousCritDistUsage
+    print(arousCritDistUsage)
+    global arousTargetUsage
+    print(arousTargetUsage)
+    global arousFillerUsage
+    #print(arousFillerUsage)
+    
+    #first time this is called, set up lists of 0s
+    if len(calmCritDistUsage) == 0 : calmCritDistUsage = np.array([0 for k in range(nImagesInFolder)])
+    if len(calmTargetUsage) == 0 : calmTargetUsage = np.array([0 for k in range(nImagesInFolder)])
+    if len(calmFillerUsage) == 0 : calmFillerUsage = np.array([0 for k in range(nImagesInFolderFillers)])
+
+    if len(arousCritDistUsage) == 0 : arousCritDistUsage = np.array([0 for k in range(nImagesInFolder)])
+    if len(arousTargetUsage) == 0 : arousTargetUsage = np.array([0 for k in range(nImagesInFolder)])
+    if len(arousFillerUsage) == 0 : arousFillerUsage = np.array([0 for k in range(nImagesInFolderFillers)])
+
     #draw the filler items. also the lineup items, as they are from same folder as the filler items
     arousFolderIdx = thisTrial['otherItemsArousing']
     folderIdx = 2
@@ -416,21 +450,40 @@ def drawImagesNeededForThisTrial(numImagesInStream,numRespOptions,thisTrial):
         numImages = numImagesInStream-2 + numRespOptions-1
     else:
         numImages = numImagesInStream-2 
-    imageNumList = np.arange(1,nImagesInFolderFillers)
+    imageNumList = np.arange(1,nImagesInFolderFillers+1)
     np.random.shuffle(imageNumList)
     imageNumList = imageNumList[0:numImages]
     for imageNum in imageNumList: #plus numRespOptions because need additional ones for the lineup
+       if folder == 'calmFiller':
+            # if calmFillerUsage[imageNum-1]==2:
+            #     newImageNum = np.random.choice([i for i in np.arange(1,nImagesInFolderFillers+1) if i not in imageNumList and calmFillerUsage[i-1]<2])
+            #     #imageNumList[imageNumList.index(imageNum)] = newImageNum
+            #     imageNumList[np.where(imageNumList==imageNum)] = newImageNum
+            #     imageNum = newImageNum
+            calmFillerUsage[imageNum-1] += 1
+       elif folder == 'arousFiller':
+       	    # if arousFillerUsage[imageNum-1]==2:
+            #     newImageNum = np.random.choice([i for i in np.arange(1,nImagesInFolderFillers+1) if i not in imageNumList and arousFillerUsage[i-1]<2])
+            #     #imageNumList[imageNumList.index(imageNum)] = newImageNum
+            #     imageNumList[np.where(imageNumList==imageNum)] = newImageNum
+            #     imageNum = newImageNum
+            arousFillerUsage[imageNum-1] += 1
        imageFilename = os.path.join("images",folder)
-       print("imageFilename path=",imageFilename)
+       #print("imageFilename path=",imageFilename)
        imageFilename +=  '/'  + str( imageNum ) + '.jpg'
-       print('loading image ',imageFilename)
+       #print('loading image ',imageFilename)
        image = visual.ImageStim(myWin, image=imageFilename, pos=(0,0), size=imageSz, units='pix',autoLog=autoLogging)
        fillerAndLineupImages.append(image)
        fillerAndLineupImageNames.append(imageNum)
     #draw the target, same arousal as the other items
     folderIdx = 1 #target
     folder = folders[arousFolderIdx][folderIdx]
-    targetImageWhich = random.randint(1,nImagesInFolder)
+    if folder == 'calmTarget':
+        targetImageWhich = np.random.choice(np.arange(1,nImagesInFolder+1)[calmTargetUsage<2])
+        calmTargetUsage[targetImageWhich-1] += 1
+    elif folder == 'arousTarget':
+    	targetImageWhich = np.random.choice(np.arange(1,nImagesInFolder+1)[arousTargetUsage<2])
+        arousTargetUsage[targetImageWhich-1] += 1
     targetFilename = os.path.join("images",folder) + '/'  + str( targetImageWhich ) + '.jpg'
     print(targetImageWhich,'\t', end='', file=dataFile) #print target name to datafile
 
@@ -441,7 +494,12 @@ def drawImagesNeededForThisTrial(numImagesInStream,numRespOptions,thisTrial):
     arousFolderIdx = thisTrial['critDistractorArousing']
     folderIdx = 0 #target
     folder = folders[arousFolderIdx][folderIdx]
-    whichImage = random.randint(1,nImagesInFolder)
+    if folder == 'calmCritDist':
+        whichImage = np.random.choice(np.arange(1,nImagesInFolder+1)[calmCritDistUsage<2])
+        calmCritDistUsage[whichImage-1] += 1
+    elif folder == 'arousCritDist':
+        whichImage = np.random.choice(np.arange(1,nImagesInFolder+1)[arousCritDistUsage<2])
+        arousCritDistUsage[whichImage-1] += 1
     imageFilename = os.path.join("images",folder) + '/'  + str(whichImage) + '.jpg'
     print(whichImage,'\t', end='', file=dataFile) #print crit distractor to datafile
 
@@ -497,7 +555,7 @@ nTrialsCorrectT2eachLag = np.zeros(len(possibleCue2lags)); nTrialsEachLag = np.z
 nTrialsApproxCorrectT2eachLag = np.zeros(len(possibleCue2lags));
 
 def do_RSVP_stim(fillerAndLineupImages,imageSequence, targetImage,critDistImage,cue1pos, cue2lag, proportnNoise,trialN):
-    #relies on global variables:
+    #relies on  variables:
     #   logging, bgColor
     #
     cuesPos = [] #will contain the positions of all the cues (targets)
@@ -583,8 +641,17 @@ print(phasesMsg); logging.info(phasesMsg)
 #myWin= openMyStimWindow();    myWin.flip(); myWin.flip();myWin.flip();myWin.flip()
 nDoneMain =0
 
+placeholder = visual.TextStim(myWin, text='When you are ready,\nclick the mouse to start the experiment', alignHoriz='center')
+
 while nDoneMain < trials.nTotal and expStop==False:
     if nDoneMain==0:
+        placeholderNoResponse = True
+        while placeholderNoResponse:
+            placeholder.draw()
+            myWin.flip()
+            mouse1, mouse2, mouse3 = myMouse.getPressed()
+            if mouse1 or mouse2 or mouse3:
+                placeholderNoResponse = False
         msg='Starting experiment'
         logging.info(msg); print(msg)
     thisTrial = trials.next() #get a trial
