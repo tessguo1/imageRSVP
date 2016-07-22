@@ -20,6 +20,7 @@ except ImportError:
 
 imageSz = (320,240)
 lineupImagesNotInStream = False
+lineupComprisedOfTargetFlankers = True
 descendingPsycho = True
 tasks=['T1','T1T2','T2']; task = tasks[2]
 #THINGS THAT COULD PREVENT SUCCESS ON A STRANGE MACHINE
@@ -365,7 +366,6 @@ def  oneFrameOfStim( n,task,distractorCueColor,cue1pos,cue2lag,cue,imageSequence
         else:
             cueColor =  targetCueColor
         cue.setFillColor( cueColor )
-
   cue.draw()
 
   if showImage:
@@ -400,8 +400,9 @@ cue = visual.Rect(myWin,
                  width=320+cueLineWidth*2,
                  height=240+cueLineWidth*2,
                  units = 'pix',
+                 lineColor = bgColor,
                  fillColorSpace='rgb',
-                 fillColor=None, #beware, with convex shapes fill colors don't work
+                 fillColor=[1,0,0], #this will be changed to cue the distractor and the target
                  pos= [0,0], #the anchor (rotation and vertices are position with respect to this)
                  interpolate=True,
                  autoLog=False)#this stim changes too much for autologging to be useful
@@ -586,8 +587,9 @@ def do_RSVP_stim(fillerAndLineupImages,imageSequence, targetImage,critDistImage,
         (noise,allFieldCoords,numNoiseDots) = createNoise(proportnNoise,myWin,noiseFieldWidthPix, bgColor)
 
     preDrawStimToGreasePipeline = list() #I don't know why this works, but without drawing it I have consistent timing blip first time that draw ringInnerR for phantom contours
-    cue.setColor(bgColor)
-    preDrawStimToGreasePipeline.extend([cue])
+    print('cue=',cue, 'bgColor=',bgColor)
+    #cue.setColor(bgColor)
+    #preDrawStimToGreasePipeline.extend([cue])
     for stim in preDrawStimToGreasePipeline:
         stim.draw()
     myWin.flip(); myWin.flip()
@@ -689,8 +691,11 @@ while nDoneMain < trials.nTotal and expStop==False:
     responses = list(); responsesAutopilot = list();
     #Work out which items from the stream will be the lineup ones.  A random 3, except for excludgn the last two items ofthe stream
     lineupImageIdxs = np.arange( numImagesInStream-2 )  #Don't ever have the last two items of the stream in the lineup?
-    np.random.shuffle(lineupImageIdxs)
-    lineupImageIdxs = lineupImageIdxs[:3] 
+    if not lineupComprisedOfTargetFlankers:
+        np.random.shuffle(lineupImageIdxs)
+        lineupImageIdxs = lineupImageIdxs[:3]
+    else: #lineupComprisedOfTargetFlankers
+        lineupImageIdxs = lineUpImageIdxs[:-3]
     lineupImages = list()
     for i in xrange(3): #assign random sequence of lineup images and print lineup image fnames
         lineupImages.append(  fillerAndLineupImages[ lineupImageIdxs[i] ]  )
