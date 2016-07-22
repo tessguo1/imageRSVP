@@ -410,7 +410,6 @@ cue = visual.Rect(myWin,
 #predraw all images needed for this trial
 imageHeight = 240; imageWidth = 320
 
-
 #populated with 0s when the drawImages... function is called the first time. 
 #Represents the number of times an image has been used. Position in the list represents image identity, which is numeric
 calmCritDistUsage = np.array([])
@@ -695,7 +694,11 @@ while nDoneMain < trials.nTotal and expStop==False:
         np.random.shuffle(lineupImageIdxs)
         lineupImageIdxs = lineupImageIdxs[:3]
     else: #lineupComprisedOfTargetFlankers
-        lineupImageIdxs = lineUpImageIdxs[:-3]
+        #We want to put in the lineup the items that flank the target.
+        #The images in the stream, otehr than the target and the critical distractor, appear in the order given by imageSequence
+        #
+
+        lineupImageIdxs = lineupImageIdxs[:-3] #My theory is that the last 3 items in the list of fillerAndLineupImage is of the last 3 in the stream, not counting the target
     lineupImages = list()
     for i in xrange(3): #assign random sequence of lineup images and print lineup image fnames
         lineupImages.append(  fillerAndLineupImages[ lineupImageIdxs[i] ]  )
