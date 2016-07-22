@@ -358,7 +358,7 @@ def  oneFrameOfStim( n,task,distractorCueColor,cue1pos,cue2lag,cue,imageSequence
   #print 'n=',n,' SOAframes=',SOAframes, ' letterDurFrames=', letterDurFrames, ' (n % SOAframes) =', (n % SOAframes)  #DEBUGOFF
   #so that any timing problems occur just as often for every frame, always draw the letter and the cue, but simply draw it in the bgColor when it's not meant to be on
   cue.setFillColor( bgColor )
-  print('distractorFrame=',distractorFrame,'cueFrames=',cueFrames, 'distractorCueColor=',distractorCueColor)
+  #print('distractorFrame=',distractorFrame,'cueFrames=',cueFrames, 'distractorCueColor=',distractorCueColor)
   for cueFrame in cueFrames: #check whether it's time for any cue
     if n>=cueFrame and n<cueFrame+cueDurFrames: #time for the target
         if cueFrame == distractorFrame: #pick a random one of the distractorCuePossibleColors (Katherine E2)
@@ -689,23 +689,26 @@ while nDoneMain < trials.nTotal and expStop==False:
     
     responses = list(); responsesAutopilot = list();
     #Work out which items from the stream will be the lineup ones.  A random 3, except for excludgn the last two items ofthe stream
-    lineupImageIdxs = np.arange( numImagesInStream-2 )  #Don't ever have the last two items of the stream in the lineup?
     if not lineupComprisedOfTargetFlankers:
+        lineupImageIdxs = deepcopy(imageSequence)
         np.random.shuffle(lineupImageIdxs)
         lineupImageIdxs = lineupImageIdxs[:3]
     else: #lineupComprisedOfTargetFlankers
         #We want to put in the lineup the items that flank the target.
-        #The images in the stream, otehr than the target and the critical distractor, appear in the order given by imageSequence
-        #
-
-        lineupImageIdxs = lineupImageIdxs[:-3] #My theory is that the last 3 items in the list of fillerAndLineupImage is of the last 3 in the stream, not counting the target
+        #The images in the stream, other than the target and the critical distractor, appear in the order given by imageSequence
+        #Don't ever have the last two items of the stream in the lineup?
+        targetPos = cue1pos + cue2lag
+        #grab the flankers of the target, they will be the lineup images
+        lineupImageIdxs = list()
+        lineupImageIdxs.append(  imageSequence[ targetPos -1] )
+        lineupImageIdxs.append(  imageSequence[ targetPos +1] )
+        lineupImageIdxs.append(  imageSequence[ targetPos +2] )
+        random.shuffle(lineupImageIdxs)
     lineupImages = list()
-    for i in xrange(3): #assign random sequence of lineup images and print lineup image fnames
+    for i in xrange(3): #assign sequence of lineup images and print lineup image fnames
         lineupImages.append(  fillerAndLineupImages[ lineupImageIdxs[i] ]  )
         print(fillerAndLineupImageNames[ lineupImageIdxs[i] ], end='\t', file=dataFile) #first thing printed on each line of dataFile
     
-    #print('fillerAndLineupImages=',fillerAndLineupImages,' last 3 for lineup=',fillerAndLineupImages[-3:])
-    #lineupImages = fillerAndLineupImages[-3:]
     expStop,responseQuadrant,targetQuadrant,autopilotQuadrant = imageLineupResponse.drawChoiceArrayAndCollectResponse(targetImage, lineupImages, clickSound,myMouse, myWin,imageSz, expStop)
     if autopilot:
         correct = (autopilotQuadrant == targetQuadrant)
