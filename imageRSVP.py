@@ -713,13 +713,14 @@ while nDoneMain < trials.nTotal and expStop==False:
     
     expStop,responseQuadrant,respImageIdx,targetQuadrant,autopilotQuadrant = imageLineupResponse.drawChoiceArrayAndCollectResponse(targetImage, lineupImages, lineupImageIdxs, clickSound,myMouse, myWin,imageSz, expStop)
     #Calculate for Katherine where the picked image is in the sequence
-    respStimSeqIdx = np.where(fillerSequence==respImageIdx)        
+    respStimSeqIdx = np.where(fillerSequence==respImageIdx)[0]
     if len(respStimSeqIdx)!=0: #they didn't pick the target. They picked another image from the lineup
-        respStimSeqIdx = respStimSeqIdx[0][0] #squeeze it out of the structure that's returned
+        respStimSeqIdx = respStimSeqIdx[0] #squeeze it out of the structure that's returned
         respStimRelToTarget = respStimSeqIdx - targetPos
         if respStimRelToTarget>=0:  #position 0 means it's the one after the target, because the fillerSequence does not include the target
             respStimRelToTarget += 1 
     else: #they picked the target ( the target is not in the fillerSequence), so the one they picked wasn't found in the fillerSequcne
+        respStimSeqIdx = 0
         respStimRelToTarget=0
         
     if autopilot:

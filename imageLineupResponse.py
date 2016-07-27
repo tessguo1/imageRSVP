@@ -20,7 +20,7 @@ def drawResponses(responses,respStim,numCharsWanted,drawBlanks):
 def drawChoiceArrayAndCollectResponse(targetImage,lineupImages,lineupImageIndexes, clickSound,myMouse,myWin,imageSz,expStop):
     event.clearEvents()
     numInArray = len(lineupImages) + 1
-    targetPos = random.randint(0, numInArray)
+    targetPos = random.randint(0, numInArray-1)
     lineupImages.insert(targetPos,targetImage)
     lineupImageIndexes.insert(targetPos,'T')
     xPosRange = 2; yPosRange = 2
