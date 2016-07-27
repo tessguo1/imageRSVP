@@ -59,7 +59,7 @@ widthPix= 1600 #monitor width in pixels of Agosta
 heightPix= 900 #800 #monitor height in pixels
 monitorwidth = 38.7 #monitor width in cm
 scrn=1 #0 to use main screen, 1 to use external screen connected to computer
-fullscr=True #True to use fullscreen, False to not. Timing probably won't be quite right if fullscreen = False
+fullscr=False #True to use fullscreen, False to not. Timing probably won't be quite right if fullscreen = False
 allowGUI = True
 if demo: monitorwidth = 23#18.0
 if exportImages:
@@ -334,6 +334,9 @@ for i in range(numRespsWanted):
    dataFile.write('answer'+str(i)+'\t')
    dataFile.write('response'+str(i)+'\t')
    dataFile.write('correct'+str(i)+'\t')
+dataFile.write('respImageIdx\t')
+dataFile.write('respStimSeqIdx\t')   #of the X items in the stimulus sequence, which one, i.e. the ith one was picked from the lineup
+dataFile.write('respStimRelToTarget\t') #the image picked from the lineu8p position in the stream relative to the target position
 print('timingBlips',file=dataFile)
 #end of header
 
@@ -584,7 +587,6 @@ def do_RSVP_stim(fillerAndLineupImages,imageSequence, targetImage,critDistImage,
         (noise,allFieldCoords,numNoiseDots) = createNoise(proportnNoise,myWin,noiseFieldWidthPix, bgColor)
 
     preDrawStimToGreasePipeline = list() #I don't know why this works, but without drawing it I have consistent timing blip first time that draw ringInnerR for phantom contours
-    print('cue=',cue, 'bgColor=',bgColor)
     #cue.setColor(bgColor)
     #preDrawStimToGreasePipeline.extend([cue])
     for stim in preDrawStimToGreasePipeline:
@@ -709,11 +711,15 @@ while nDoneMain < trials.nTotal and expStop==False:
         lineupImages.append(  fillerAndLineupImages[ lineupImageIdxs[i] ]  )
         print(fillerAndLineupImageNames[ lineupImageIdxs[i] ], end='\t', file=dataFile) #first thing printed on each line of dataFile
     
-    expStop,responseQuadrant,targetQuadrant,autopilotQuadrant = imageLineupResponse.drawChoiceArrayAndCollectResponse(targetImage, lineupImages, lineupImageIdxs, clickSound,myMouse, myWin,imageSz, expStop)
+    expStop,responseQuadrant,respImageIdx,targetQuadrant,autopilotQuadrant = imageLineupResponse.drawChoiceArrayAndCollectResponse(targetImage, lineupImages, lineupImageIdxs, clickSound,myMouse, myWin,imageSz, expStop)
+    #Calculate for Katherine where the picked image is in the sequence
+    respStimSeqIdx = np.where(imageSequence==respImageIdx)
+    respStimSeqIdx = respStimSeqIdx[0][0] #squeeze it out of the structure that's returned
+    respStimRelToTarget = respStimSeqIdx - targetPos
     if autopilot:
         correct = (autopilotQuadrant == targetQuadrant)
     else:  correct = (responseQuadrant == targetQuadrant)
-    print('expStop=',expStop,' responseQuadrant=',responseQuadrant, ' autopilotQuadrant =', autopilotQuadrant, 'correct = ',correct)
+    print('expStop=',expStop,' responseQuadrant=',responseQuadrant, 'respImageIdx=',respImageIdx, ' autopilotQuadrant =', autopilotQuadrant, 'correct = ',correct)
     
     if not expStop:
         print('main\t', end='', file=dataFile) #first thing printed on each line of dataFile
@@ -740,6 +746,9 @@ while nDoneMain < trials.nTotal and expStop==False:
         answerName = targetImageWhichN
         print(answerName, '\t', end='', file=dataFile) #answer0
         print(responseQuadrant, '\t', end='', file=dataFile) #response0
+        print(respImageIdx,'\t',end='',file=dataFile) #filename of image picked from the lineup?
+        print(respStimSeqIdx,'\t',end='',file=dataFile) #of the X items in the stimulus sequence, which one, i.e. the ith one was picked from the lineup
+        print(respStimRelToTarget,'\t',end='',file=dataFile) #the image picked from the lineu8p position in the stream relative to the target position
         print(correct, '\t', end='',file=dataFile)   #correct0
         print(numCasesInterframeLong, file=dataFile) #timingBlips, last thing recorded on each line of dataFile
 

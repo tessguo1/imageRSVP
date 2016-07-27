@@ -28,7 +28,7 @@ def drawChoiceArrayAndCollectResponse(targetImage,lineupImages,lineupImageIndexe
     spacingFactor = 0.2
     coords =  np.round( coords * imageSz[0] * (1+spacingFactor) )
     coords = coords.astype(int)
-    print('lineupImages=',lineupImages, 'lineupImageIndexes-',lineupImageIndexes, 'numInArray=',numInArray)
+    print('lineupImageIndexes-',lineupImageIndexes, 'numInArray=',numInArray)
     
     respondedYet = False
     for i in xrange(numInArray):
@@ -37,8 +37,8 @@ def drawChoiceArrayAndCollectResponse(targetImage,lineupImages,lineupImageIndexe
         lineupImages[i].setPos((x,y))
         lineupImages[i].draw()
         showImageNums = True
-        if showImageNums:
-            num = visual.TextStim(myWin,pos=(x,y),colorSpace='rgb',color=(1,1,1),alignHoriz='center', alignVert='center',height=.4,units='norm',autoLog=False)
+        if showImageNums: #this doesn't work
+            num = visual.TextStim(myWin,pos=(x,y),colorSpace='rgb',color=(1,1,1),alignHoriz='center', alignVert='center',height=1,units='norm',autoLog=False)
             num.setText( str(lineupImageIndexes[i]) )
             num.draw()
         print("Drew ", i, " at ",x,y)
@@ -68,7 +68,7 @@ def drawChoiceArrayAndCollectResponse(targetImage,lineupImages,lineupImageIndexe
     autopilotQuadrant = 1
     targetQuadrant = targetPos
     print("mouseAngle = ",mouseAngle, 'respQuadrant =',respQuadrant, 'targetQuadrant = ',targetQuadrant)
-    return expStop,respQuadrant,targetQuadrant,autopilotQuadrant
+    return expStop,respQuadrant,lineupImageIndexes[respQuadrant], targetQuadrant,autopilotQuadrant
     
 #llerAndLineupImages, targetImage,  critDistImage
 def drawChoiceArrayAndCollectResponseWithFnames(targetFileName, foilPath,foilFileNameList,clickSound, myWin,expStop):
