@@ -57,7 +57,7 @@ def drawChoiceArrayAndCollectResponse(targetImage,lineupImages,lineupImageIndexe
             #clickSound.play()
 
     if (expStop):
-        return 1,0,1,1
+        return 1,-99,-99,-99,1
         
     print('mouseX,mouseY=',mouseX,mouseY)
     #calculate angle of mouse click vector

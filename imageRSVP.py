@@ -340,7 +340,7 @@ dataFile.write('respStimRelToTarget\t') #the image picked from the lineu8p posit
 print('timingBlips',file=dataFile)
 #end of header
 
-def  oneFrameOfStim( n,task,distractorCueColor,cue1pos,cue2lag,cue,imageSequence,cueDurFrames,imageDurFrames,ISIframes,targetsPos,
+def  oneFrameOfStim( n,task,distractorCueColor,cue1pos,cue2lag,cue,cueDurFrames,imageDurFrames,ISIframes,targetsPos,
                                        noise,proportnNoise,allFieldCoords,numNoiseDots,
                                        fillerAndLineupImages, targetImage,  critDistImage): 
 #defining a function to draw each frame of stim. So can call second time for tracking task response phase
@@ -568,7 +568,7 @@ numTrialsEachApproxCorrect= np.zeros( numRespsWanted )
 nTrialsCorrectT2eachLag = np.zeros(len(possibleCue2lags)); nTrialsEachLag = np.zeros(len(possibleCue2lags))
 nTrialsApproxCorrectT2eachLag = np.zeros(len(possibleCue2lags));
 
-def do_RSVP_stim(fillerAndLineupImages,imageSequence, targetImage,critDistImage,cue1pos, cue2lag, proportnNoise,trialN):
+def do_RSVP_stim(fillerAndLineupImages,fillerSequence, targetImage,critDistImage,cue1pos, cue2lag, proportnNoise,trialN):
     #relies on  variables:
     #   logging, bgColor
     #
@@ -581,7 +581,7 @@ def do_RSVP_stim(fillerAndLineupImages,imageSequence, targetImage,critDistImage,
         targetsPos.append(cue1pos+cue2lag)
 
     targetsPos = np.array(targetsPos)
-    correctAnswers = np.array( imageSequence[targetsPos] )
+    correctAnswers = np.array( fillerSequence[targetsPos] )
     noise = None; allFieldCoords=None; numNoiseDots=0
     if proportnNoise > 0: #generating noise is time-consuming, so only do it once per trial. Then shuffle noise coordinates for each image
         (noise,allFieldCoords,numNoiseDots) = createNoise(proportnNoise,myWin,noiseFieldWidthPix, bgColor)
@@ -611,7 +611,7 @@ def do_RSVP_stim(fillerAndLineupImages,imageSequence, targetImage,critDistImage,
     distractorCueColor = distractorCuePossibleColors[0]
     print('distractorCueColor=',distractorCueColor)
     for n in range(trialDurFrames): #this is the loop for this trial's stimulus!
-        worked = oneFrameOfStim( n,task,distractorCueColor,cue1pos,cue2lag,cue,imageSequence,cueDurFrames,imageDurFrames,ISIframes,targetsPos,
+        worked = oneFrameOfStim( n,task,distractorCueColor,cue1pos,cue2lag,cue,cueDurFrames,imageDurFrames,ISIframes,targetsPos,
                                                      noise,proportnNoise,allFieldCoords,numNoiseDots,
                                                      fillerAndLineupImages, targetImage,  critDistImage) #draw image and possibly cue and noise on top
         if exportImages:
@@ -628,7 +628,7 @@ def do_RSVP_stim(fillerAndLineupImages,imageSequence, targetImage,critDistImage,
         respPromptStim.setText('Which two images were circled?',log=False)
     else: respPromptStim.setText('Error: unexpected task',log=False)
     postCueNumBlobsAway=-999 #doesn't apply to non-tracking and click tracking task
-    return imageSequence,targetsPos,correctAnswers, ts  
+    return fillerSequence,targetsPos,correctAnswers, ts  
     
 
 def play_high_tone_correct_low_incorrect(correct, playIncorrect=True, passThisTrial=False):
@@ -677,34 +677,34 @@ while nDoneMain < trials.nTotal and expStop==False:
         cue2lag = thisTrial['cue2lag']
     myMouse.setVisible(False)  #once it was set invisible, we weren't able to make it visible again
     fillerAndLineupImages, fillerAndLineupImageNames, targetImage,critDistImage,targetImageWhichN = drawImagesNeededForThisTrial(numImagesInStream,numRespOptions,thisTrial)
-    imageSequence = np.arange(0,numImagesInStream-2) #not including the critical distractor and the target
-    #np.random.shuffle(imageSequence)
+    fillerSequence = np.arange(0,numImagesInStream-2) #not including the critical distractor and the target
+    #np.random.shuffle(fillerSequence)
     #print out the filler image filenames, in order
     for i in xrange(len(fillerAndLineupImageNames)):
-        imageIname = fillerAndLineupImageNames[  imageSequence[i] ]
+        imageIname = fillerAndLineupImageNames[  fillerSequence[i] ]
         print(imageIname,'\t', end='', file=dataFile)
         
-    letterSequence,targetsPos,correctAnswers,ts  = do_RSVP_stim(fillerAndLineupImages, imageSequence, targetImage,critDistImage,cue1pos, cue2lag, noisePercent/100.,nDoneMain)
+    letterSequence,targetsPos,correctAnswers,ts  = do_RSVP_stim(fillerAndLineupImages, fillerSequence, targetImage,critDistImage,cue1pos, cue2lag, noisePercent/100.,nDoneMain)
     numCasesInterframeLong = timingCheckAndLog(ts,nDoneMain)
     myMouse.setVisible(True)
 
     responses = list(); responsesAutopilot = list();
     #Work out which items from the stream will be the lineup ones.  A random 3, except for excludgn the last two items ofthe stream
     if not lineupComprisedOfTargetFlankers:
-        lineupImageIdxs = deepcopy(imageSequence)
+        lineupImageIdxs = deepcopy(fillerSequence)
         np.random.shuffle(lineupImageIdxs)
         lineupImageIdxs = lineupImageIdxs[:3]
     else: #lineupComprisedOfTargetFlankers
         #We want to put in the lineup the items that flank the target.
-        #The images in the stream, other than the target and the critical distractor, appear in the order given by imageSequence
+        #The images in the stream, other than the target and the critical distractor, appear in the order given by fillerSequence
         #Don't ever have the last two items of the stream in the lineup?
         targetPos = cue1pos + cue2lag
-        targetPos = targetPos -1 #because in the imageSequence that will be used, the oddball is omitted
+        targetPos = targetPos -1 #because in the fillerSequence that will be used, the oddball is omitted
         #grab the flankers of the target, they will be the lineup images
         lineupImageIdxs = list()
-        lineupImageIdxs.append(  imageSequence[ targetPos -1] )
-        lineupImageIdxs.append(  imageSequence[ targetPos+ 0] ) #+1
-        lineupImageIdxs.append(  imageSequence[ targetPos +1] ) #+2
+        lineupImageIdxs.append(  fillerSequence[ targetPos -1] ) #the one before the target
+        lineupImageIdxs.append(  fillerSequence[ targetPos] ) #The one after the target
+        lineupImageIdxs.append(  fillerSequence[ targetPos +1] ) #+2
         #random.shuffle(lineupImageIdxs)
     lineupImages = list()
     for i in xrange(3): #assign sequence of lineup images and print lineup image fnames
@@ -713,9 +713,15 @@ while nDoneMain < trials.nTotal and expStop==False:
     
     expStop,responseQuadrant,respImageIdx,targetQuadrant,autopilotQuadrant = imageLineupResponse.drawChoiceArrayAndCollectResponse(targetImage, lineupImages, lineupImageIdxs, clickSound,myMouse, myWin,imageSz, expStop)
     #Calculate for Katherine where the picked image is in the sequence
-    respStimSeqIdx = np.where(imageSequence==respImageIdx)
-    respStimSeqIdx = respStimSeqIdx[0][0] #squeeze it out of the structure that's returned
-    respStimRelToTarget = respStimSeqIdx - targetPos
+    respStimSeqIdx = np.where(fillerSequence==respImageIdx)        
+    if len(respStimSeqIdx)!=0: #they didn't pick the target. They picked another image from the lineup
+        respStimSeqIdx = respStimSeqIdx[0][0] #squeeze it out of the structure that's returned
+        respStimRelToTarget = respStimSeqIdx - targetPos
+        if respStimRelToTarget>=0:  #position 0 means it's the one after the target, because the fillerSequence does not include the target
+            respStimRelToTarget += 1 
+    else: #they picked the target ( the target is not in the fillerSequence), so the one they picked wasn't found in the fillerSequcne
+        respStimRelToTarget=0
+        
     if autopilot:
         correct = (autopilotQuadrant == targetQuadrant)
     else:  correct = (responseQuadrant == targetQuadrant)
@@ -746,10 +752,10 @@ while nDoneMain < trials.nTotal and expStop==False:
         answerName = targetImageWhichN
         print(answerName, '\t', end='', file=dataFile) #answer0
         print(responseQuadrant, '\t', end='', file=dataFile) #response0
+        print(correct, '\t', end='',file=dataFile)   #correct0
         print(respImageIdx,'\t',end='',file=dataFile) #filename of image picked from the lineup?
         print(respStimSeqIdx,'\t',end='',file=dataFile) #of the X items in the stimulus sequence, which one, i.e. the ith one was picked from the lineup
         print(respStimRelToTarget,'\t',end='',file=dataFile) #the image picked from the lineu8p position in the stream relative to the target position
-        print(correct, '\t', end='',file=dataFile)   #correct0
         print(numCasesInterframeLong, file=dataFile) #timingBlips, last thing recorded on each line of dataFile
 
         nDoneMain+=1
