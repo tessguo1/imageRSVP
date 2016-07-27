@@ -1,5 +1,5 @@
 from __future__ import print_function
-from psychopy import event, sound
+from psychopy import event, sound, visual
 import numpy as np
 import string, math
 from copy import deepcopy
@@ -17,17 +17,18 @@ def drawResponses(responses,respStim,numCharsWanted,drawBlanks):
     respStim.setText(respStr,log=False)
     respStim.draw(); 
 
-def drawChoiceArrayAndCollectResponse(targetImage,lineupImages,clickSound,myMouse,myWin,imageSz,expStop):
+def drawChoiceArrayAndCollectResponse(targetImage,lineupImages,lineupImageIndexes, clickSound,myMouse,myWin,imageSz,expStop):
     event.clearEvents()
     numInArray = len(lineupImages) + 1
     targetPos = random.randint(0, numInArray)
     lineupImages.insert(targetPos,targetImage)
+    lineupImageIndexes.insert(targetPos,'T')
     xPosRange = 2; yPosRange = 2
     coords =  np.array( [ [.5,.5],[-.5,.5],[-.5,-.5],[.5,-.5] ] ) #only works for 4 items in choice array
     spacingFactor = 0.2
     coords =  np.round( coords * imageSz[0] * (1+spacingFactor) )
     coords = coords.astype(int)
-    print('numInArray=',numInArray)
+    print('lineupImages=',lineupImages, 'lineupImageIndexes-',lineupImageIndexes, 'numInArray=',numInArray)
     
     respondedYet = False
     for i in xrange(numInArray):
@@ -35,6 +36,11 @@ def drawChoiceArrayAndCollectResponse(targetImage,lineupImages,clickSound,myMous
         y = coords[i][1]
         lineupImages[i].setPos((x,y))
         lineupImages[i].draw()
+        showImageNums = True
+        if showImageNums:
+            num = visual.TextStim(myWin,pos=(x,y),colorSpace='rgb',color=(1,1,1),alignHoriz='center', alignVert='center',height=.4,units='norm',autoLog=False)
+            num.setText( str(lineupImageIndexes[i]) )
+            num.draw()
         print("Drew ", i, " at ",x,y)
     myWin.flip()
         

@@ -47,10 +47,10 @@ if demo:
 
 threshCriterion = 0.58
 bgColor = [-1,-1,-1] # [-1,-1,-1]
-targetCueColor = [0.,0.,1.]
-distractorCuePossibleColors =  [ [1,1,0], #yellow
-                                                    [0,1,0], #green
-                                                    [1,.5,0]  #orange
+targetCueColor = [0,0,1.25] # [0,0,1]
+distractorCuePossibleColors =  [ [.5,.5,0], #yellow [1,1,0]
+                                                    [0,.5,0], #green [0,1,0]
+                                                    [.5,.25,0]  #orange [1,.5,0]
                                                     ] 
 letterColor = [1.,1.,1.]
 cueRadius = 6 #6 deg, as in Martini E2    Letters should have height of 2.5 deg
@@ -59,8 +59,8 @@ widthPix= 1600 #monitor width in pixels of Agosta
 heightPix= 900 #800 #monitor height in pixels
 monitorwidth = 38.7 #monitor width in cm
 scrn=1 #0 to use main screen, 1 to use external screen connected to computer
-fullscr=False #True to use fullscreen, False to not. Timing probably won't be quite right if fullscreen = False
-allowGUI = False
+fullscr=True #True to use fullscreen, False to not. Timing probably won't be quite right if fullscreen = False
+allowGUI = True
 if demo: monitorwidth = 23#18.0
 if exportImages:
     widthPix = 400; heightPix = 400
@@ -76,7 +76,7 @@ pixelperdegree = widthPix/ (atan(monitorwidth/viewdist) /np.pi*180)
 print('pixelperdegree=',pixelperdegree)
     
 # create a dialog from dictionary 
-infoFirst = {  'Check refresh etc':False, 'Fullscreen (timing errors if not)': False, 'Screen refresh rate': 60 }
+infoFirst = {  'Check refresh etc':True, 'Fullscreen (timing errors if not)': fullscr, 'Screen refresh rate': 60 }
 OK = gui.DlgFromDict(dictionary=infoFirst, 
     title='RSVP experiment', 
     order=['Check refresh etc', 'Fullscreen (timing errors if not)','Screen refresh rate'], 
@@ -100,8 +100,8 @@ if quitFinder:
 numImagesInStream = 10
 numRespOptions = 4
 numImagesToPresent = 10
-SOAms =  150 
-imageDurMs = 150 
+SOAms =  500
+imageDurMs = 500  
 
 ISIms = SOAms - imageDurMs
 imageDurFrames = int( np.floor(imageDurMs / (1000./refreshRate)) )
@@ -208,8 +208,6 @@ else:
    print('User cancelled from dialog box.')
    logging.flush()
    core.quit()
-if not demo: 
-    allowGUI = False
 
 myWin = openMyStimWindow()
 #set up output data file, log file,  copy of program code, and logging
@@ -395,7 +393,7 @@ def  oneFrameOfStim( n,task,distractorCueColor,cue1pos,cue2lag,cue,imageSequence
 # #######End of function definition that displays the stimuli!!!! #####################################
 #############################################################################################################################
 
-cueLineWidth = 30
+cueLineWidth = 20
 cue = visual.Rect(myWin, 
                  width=320+cueLineWidth*2,
                  height=240+cueLineWidth*2,
@@ -464,7 +462,7 @@ def drawImagesNeededForThisTrial(numImagesInStream,numRespOptions,thisTrial):
     else: #lineupImages in stream, so just pick the lineup images from the same list as the stream items
         numImages = numImagesInStream-2 
     imageNumList = np.arange(1,nImagesInFolderFillers+1)
-    np.random.shuffle(imageNumList) 
+    #np.random.shuffle(imageNumList) 
     imageNumList = imageNumList[0:numImages] #Now this indicates the images in a folder, but in random order
     for imageNum in imageNumList: #plus numRespOptions because need additional ones for the lineup
        if folder == 'calmFiller':
@@ -675,10 +673,10 @@ while nDoneMain < trials.nTotal and expStop==False:
     cue2lag = None
     if task=="T1T2" or task=="T2":
         cue2lag = thisTrial['cue2lag']
-        
+    myMouse.setVisible(False)  #once it was set invisible, we weren't able to make it visible again
     fillerAndLineupImages, fillerAndLineupImageNames, targetImage,critDistImage,targetImageWhichN = drawImagesNeededForThisTrial(numImagesInStream,numRespOptions,thisTrial)
     imageSequence = np.arange(0,numImagesInStream-2) #not including the critical distractor and the target
-    np.random.shuffle(imageSequence)
+    #np.random.shuffle(imageSequence)
     #print out the filler image filenames, in order
     for i in xrange(len(fillerAndLineupImageNames)):
         imageIname = fillerAndLineupImageNames[  imageSequence[i] ]
@@ -686,7 +684,8 @@ while nDoneMain < trials.nTotal and expStop==False:
         
     letterSequence,targetsPos,correctAnswers,ts  = do_RSVP_stim(fillerAndLineupImages, imageSequence, targetImage,critDistImage,cue1pos, cue2lag, noisePercent/100.,nDoneMain)
     numCasesInterframeLong = timingCheckAndLog(ts,nDoneMain)
-    
+    myMouse.setVisible(True)
+
     responses = list(); responsesAutopilot = list();
     #Work out which items from the stream will be the lineup ones.  A random 3, except for excludgn the last two items ofthe stream
     if not lineupComprisedOfTargetFlankers:
@@ -698,18 +697,19 @@ while nDoneMain < trials.nTotal and expStop==False:
         #The images in the stream, other than the target and the critical distractor, appear in the order given by imageSequence
         #Don't ever have the last two items of the stream in the lineup?
         targetPos = cue1pos + cue2lag
+        targetPos = targetPos -1 #because in the imageSequence that will be used, the oddball is omitted
         #grab the flankers of the target, they will be the lineup images
         lineupImageIdxs = list()
         lineupImageIdxs.append(  imageSequence[ targetPos -1] )
-        lineupImageIdxs.append(  imageSequence[ targetPos +1] )
-        lineupImageIdxs.append(  imageSequence[ targetPos +2] )
-        random.shuffle(lineupImageIdxs)
+        lineupImageIdxs.append(  imageSequence[ targetPos+ 0] ) #+1
+        lineupImageIdxs.append(  imageSequence[ targetPos +1] ) #+2
+        #random.shuffle(lineupImageIdxs)
     lineupImages = list()
     for i in xrange(3): #assign sequence of lineup images and print lineup image fnames
         lineupImages.append(  fillerAndLineupImages[ lineupImageIdxs[i] ]  )
         print(fillerAndLineupImageNames[ lineupImageIdxs[i] ], end='\t', file=dataFile) #first thing printed on each line of dataFile
     
-    expStop,responseQuadrant,targetQuadrant,autopilotQuadrant = imageLineupResponse.drawChoiceArrayAndCollectResponse(targetImage, lineupImages, clickSound,myMouse, myWin,imageSz, expStop)
+    expStop,responseQuadrant,targetQuadrant,autopilotQuadrant = imageLineupResponse.drawChoiceArrayAndCollectResponse(targetImage, lineupImages, lineupImageIdxs, clickSound,myMouse, myWin,imageSz, expStop)
     if autopilot:
         correct = (autopilotQuadrant == targetQuadrant)
     else:  correct = (responseQuadrant == targetQuadrant)
