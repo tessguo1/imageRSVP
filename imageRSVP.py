@@ -362,8 +362,12 @@ def  oneFrameOfStim( n,task,distractorCueColor,cue1pos,cue2lag,cue,cueDurFrames,
   #print('distractorFrame=',distractorFrame,'cueFrames=',cueFrames, 'distractorCueColor=',distractorCueColor)
   for cueFrame in cueFrames: #check whether it's time for any cue
     if n>=cueFrame and n<cueFrame+cueDurFrames: #time for the target
-        if cueFrame == distractorFrame: #pick a random one of the distractorCuePossibleColors (Katherine E2)
-            cueColor = distractorCueColor
+        if cueFrame == distractorFrame: #pick a random one of the distractorCuePossibleColors (Katherine E2) or alternatively use a tone (Katherine E3)
+            if toneNotColoredFrame: #Katherine E3
+                cueColor = bgColor
+                tone.play()
+            else:
+                cueColor = distractorCueColor
         else:
             cueColor =  targetCueColor
         cue.setFillColor( cueColor )
