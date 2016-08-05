@@ -3,7 +3,7 @@
 #See the README.md for more information: https://github.com/alexholcombe/attentional-blink/blob/master/README.md
 #git remote add origin https://github.com/alexholcombe/attentional-blink.git
 from __future__ import print_function
-from psychopy import monitors, visual, event, data, logging, core, sound, gui
+from psychopy import monitors, visual, event, data, logging, core, sound, gui, prefs
 import psychopy.info
 import numpy as np
 from math import atan, log, ceil
@@ -23,6 +23,7 @@ lineupImagesNotInStream = False
 lineupComprisedOfTargetFlankers = True
 descendingPsycho = True
 tasks=['T1','T1T2','T2']; task = tasks[2]
+beepNotColoredFrame = True #if True, play a tone at the time of the critical distractor rather than drawing a colored rectangle
 #THINGS THAT COULD PREVENT SUCCESS ON A STRANGE MACHINE
 #same screen or external screen? Set scrn=0 if one screen. scrn=1 means display stimulus on second screen.
 #widthPix, heightPix
@@ -244,12 +245,19 @@ if fullscr and not demo and not exportImages:
     logging.info(runInfo)
 logging.flush()
 
+if prefs.general['audioLib'][0] == 'pyo': #In Psychopy2->Preferences->General can try putting pyo first, maybe then it will use coreaudio
+    # if pyo is the first lib in the list of preferred libs then we could use small buffer
+    # pygame sound is very bad with a small buffer though
+    sound.init(48000, buffer=128)
+print('Using ',sound.audioLib,' (with ',sound.audioDriver,' for sounds' )
+
 #create click sound for keyboard
 try:
     click=sound.Sound('406__tictacshutup__click-1-d.wav')
-except: #in case file missing, create inferiro click manually
+except: #in case file missing, create inferior click manually
     logging.warn('Could not load the desired click sound file, instead using manually created inferior click')
     click=sound.Sound('D',octave=4, sampleRate=22050, secs=0.015, bits=8)
+beep=sound.Sound('D',octave=5, sampleRate=22050, secs=0.100, bits=8)
 
 if showRefreshMisses:
     fixSizePix = 32 #2.6  #make fixation bigger so flicker more conspicuous
@@ -340,8 +348,8 @@ dataFile.write('respStimRelToTarget\t') #the image picked from the lineu8p posit
 print('timingBlips',file=dataFile)
 #end of header
 
-def  oneFrameOfStim( n,task,distractorCueColor,cue1pos,cue2lag,cue,cueDurFrames,imageDurFrames,ISIframes,targetsPos,
-                                       noise,proportnNoise,allFieldCoords,numNoiseDots,
+def  oneFrameOfStim( n,task,distractorCueColor,beepPlayedYet,cue1pos,cue2lag,cue,cueDurFrames,imageDurFrames,ISIframes,targetsPos,
+                                       noise,proportnNoise,allFieldCoords,numNoiseDots, 
                                        fillerAndLineupImages, targetImage,  critDistImage): 
 #defining a function to draw each frame of stim. So can call second time for tracking task response phase
   SOAframes = imageDurFrames+ISIframes
@@ -363,9 +371,11 @@ def  oneFrameOfStim( n,task,distractorCueColor,cue1pos,cue2lag,cue,cueDurFrames,
   for cueFrame in cueFrames: #check whether it's time for any cue
     if n>=cueFrame and n<cueFrame+cueDurFrames: #time for the target
         if cueFrame == distractorFrame: #pick a random one of the distractorCuePossibleColors (Katherine E2) or alternatively use a tone (Katherine E3)
-            if toneNotColoredFrame: #Katherine E3
+            if beepNotColoredFrame: #Katherine E3
                 cueColor = bgColor
-                tone.play()
+                if not beepPlayedYet:
+                    beep.play()
+                beepPlayedYet= True
             else:
                 cueColor = distractorCueColor
         else:
@@ -396,7 +406,7 @@ def  oneFrameOfStim( n,task,distractorCueColor,cue1pos,cue2lag,cue,cueDurFrames,
         noise.setXYs(dotCoords)
   if proportnNoise>0:
     noise.draw()
-  return True 
+  return beepPlayedYet
 # #######End of function definition that displays the stimuli!!!! #####################################
 #############################################################################################################################
 
@@ -613,9 +623,9 @@ def do_RSVP_stim(fillerAndLineupImages,fillerSequence, targetImage,critDistImage
     t0 = trialClock.getTime()
     random.shuffle(distractorCuePossibleColors) #for Katherine's E2 that uses a cue around the irrelvant oddball, of a random color
     distractorCueColor = distractorCuePossibleColors[0]
-    print('distractorCueColor=',distractorCueColor)
+    beepPlayedYet=False
     for n in range(trialDurFrames): #this is the loop for this trial's stimulus!
-        worked = oneFrameOfStim( n,task,distractorCueColor,cue1pos,cue2lag,cue,cueDurFrames,imageDurFrames,ISIframes,targetsPos,
+        beepPlayedYet = oneFrameOfStim( n,task,distractorCueColor,beepPlayedYet, cue1pos,cue2lag,cue,cueDurFrames,imageDurFrames,ISIframes,targetsPos,
                                                      noise,proportnNoise,allFieldCoords,numNoiseDots,
                                                      fillerAndLineupImages, targetImage,  critDistImage) #draw image and possibly cue and noise on top
         if exportImages:
@@ -635,17 +645,20 @@ def do_RSVP_stim(fillerAndLineupImages,fillerSequence, targetImage,critDistImage
     return fillerSequence,targetsPos,correctAnswers, ts  
     
 
-def play_high_tone_correct_low_incorrect(correct, playIncorrect=True, passThisTrial=False):
-    highA = sound.Sound('G',octave=5, sampleRate=6000, secs=.3, bits=8)
+def play_high_tone_correct_low_incorrect(correct, useProvidedSound, thisSound, playIncorrect=True, passThisTrial=False):
+    high = sound.Sound('G',octave=5, sampleRate=6000, secs=.3, bits=8)
     low = sound.Sound('F',octave=3, sampleRate=6000, secs=.3, bits=8)
-    highA.setVolume(0.9)
+    high.setVolume(0.9)
     low.setVolume(1.0)
     if correct:
-        highA.play()
+        if useProvidedSound:
+             thisSound.play()
+        else:
+             high.play()
     elif passThisTrial:
-        high= sound.Sound('G',octave=4, sampleRate=2000, secs=.08, bits=8)
-        for i in range(2): 
-            high.play();  low.play(); 
+            high= sound.Sound('G',octave=4, sampleRate=2000, secs=.08, bits=8)
+            for i in range(2): 
+                high.play();  low.play(); 
     elif playIncorrect: #incorrect
         low.play()
 
@@ -749,7 +762,7 @@ while nDoneMain < trials.nTotal and expStop==False:
              myWin.saveMovieFrames('exported/frames.mov')  
              expStop=True
         core.wait(.1)
-        if feedback: play_high_tone_correct_low_incorrect(correct, playIncorrect=False, passThisTrial=False)
+        if feedback: play_high_tone_correct_low_incorrect(correct, useProvidedSound=True, thisSound=click, playIncorrect=False, passThisTrial=False)
         
         for i in range(len(targetsPos)): #print response stuff to dataFile
             #header was answerPos0, answer0, response0, correct0
