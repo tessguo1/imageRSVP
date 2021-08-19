@@ -192,7 +192,7 @@ if checkRefreshEtc and (not demo) and (myWinRes != [widthPix,heightPix]).any():
     myDlg.addText(msgWrongResolution, color='Red')
     logging.error(msgWrongResolution)
     print(msgWrongResolution)
-myDlg.addText('Note: to abort press ESC at a trials response screen', color=[-1.,1.,-1.]) # color='DimGrey') color names stopped working along the way, for unknown reason
+myDlg.addText('Note: to abort press ESC at a trials response screen', color='DimGrey')
 myDlg.show()
 
 if myDlg.OK: #unpack information from dialogue box
@@ -245,10 +245,12 @@ if fullscr and not demo and not exportImages:
     logging.info(runInfo)
 logging.flush()
 
-if prefs.general['audioLib'][0] == 'pyo': #In Psychopy2->Preferences->General can try putting pyo first, maybe then it will use coreaudio
+#Outdated below
+#if prefs.general['audioLib'][0] == 'pyo': #In Psychopy2->Preferences->General can try putting pyo first, maybe then it will use coreaudio
     # if pyo is the first lib in the list of preferred libs then we could use small buffer
     # pygame sound is very bad with a small buffer though
-    sound.init(48000, buffer=128)
+#    sound.init(48000, buffer=128)
+
 print('Using ',sound.audioLib,' (with ',sound.audioDriver,' for sounds' )
 
 #create click sound for keyboard
@@ -256,15 +258,15 @@ try:
     click=sound.Sound('406__tictacshutup__click-1-d.wav')
 except: #in case file missing, create inferior click manually
     logging.warn('Could not load the desired click sound file, instead using manually created inferior click')
-    click=sound.Sound('D',octave=4, sampleRate=22050, secs=0.015, bits=8)
-beep=sound.Sound('D',octave=5, sampleRate=22050, secs=0.100, bits=8)
+    click=sound.Sound('D',octave=4, sampleRate=22050, secs=0.015)
+beep=sound.Sound('D',octave=5, sampleRate=22050, secs=0.100)
 
 if showRefreshMisses:
     fixSizePix = 32 #2.6  #make fixation bigger so flicker more conspicuous
 else: fixSizePix = 32
 fixColor = [1,1,1]
 if exportImages: fixColor= [0,0,0]
-fixatnNoiseTexture = np.round( np.random.rand(fixSizePix/4,fixSizePix/4) ,0 )   *2.0-1 #Can counterphase flicker  noise texture to create salient flicker if you break fixation
+fixatnNoiseTexture = np.round( np.random.rand(int(fixSizePix/4),int(fixSizePix/4)) ,0 )   *2.0-1 #Can counterphase flicker  noise texture to create salient flicker if you break fixation
 
 fixation= visual.PatchStim(myWin, tex=fixatnNoiseTexture, size=(fixSizePix,fixSizePix), units='pix', mask='circle', interpolate=False, autoLog=False)
 fixationBlank= visual.PatchStim(myWin, tex= -1*fixatnNoiseTexture, size=(fixSizePix,fixSizePix), units='pix', mask='circle', interpolate=False, autoLog=False) #reverse contrast
@@ -325,9 +327,9 @@ def letterToNumber(letter): #A = 0, Z = 25
 
 #print header for data file
 print('critDistFname\ttargetFname\t',file=dataFile,end='')
-for i in xrange(numImagesInStream-2):
+for i in range(numImagesInStream-2):
     print('fillerImage',i,sep='',file=dataFile,end='\t')
-for i in xrange(3):
+for i in range(3):
     print('lineupImage',i,sep='',file=dataFile,end='\t')
 print('experimentPhase\ttrialnum\tsubject\ttask\t',file=dataFile,end='')
 if task=='T1' or task=='T2':
@@ -510,7 +512,7 @@ def drawImagesNeededForThisTrial(numImagesInStream,numRespOptions,thisTrial):
         targetImageWhich = np.random.choice(np.arange(1,nImagesInFolder+1)[calmTargetUsage<2])
         calmTargetUsage[targetImageWhich-1] += 1
     elif folder == 'arousTarget':
-    	targetImageWhich = np.random.choice(np.arange(1,nImagesInFolder+1)[arousTargetUsage<2])
+        targetImageWhich = np.random.choice(np.arange(1,nImagesInFolder+1)[arousTargetUsage<2])
         arousTargetUsage[targetImageWhich-1] += 1
     targetFilename = os.path.join("images",folder) + '/'  + str( targetImageWhich ) + '.jpg'
     print(targetImageWhich,'\t', end='', file=dataFile) #print target name to datafile
@@ -697,7 +699,7 @@ while nDoneMain < trials.nTotal and expStop==False:
     fillerSequence = np.arange(0,numImagesInStream-2) #not including the critical distractor and the target
     #np.random.shuffle(fillerSequence)
     #print out the filler image filenames, in order
-    for i in xrange(len(fillerAndLineupImageNames)):
+    for i in range(len(fillerAndLineupImageNames)):
         imageIname = fillerAndLineupImageNames[  fillerSequence[i] ]
         print(imageIname,'\t', end='', file=dataFile)
         
@@ -724,7 +726,7 @@ while nDoneMain < trials.nTotal and expStop==False:
         lineupImageIdxs.append(  fillerSequence[ targetPos +1] ) #+2
         #random.shuffle(lineupImageIdxs)
     lineupImages = list()
-    for i in xrange(3): #assign sequence of lineup images and print lineup image fnames
+    for i in range(3): #assign sequence of lineup images and print lineup image fnames
         lineupImages.append(  fillerAndLineupImages[ lineupImageIdxs[i] ]  )
         print(fillerAndLineupImageNames[ lineupImageIdxs[i] ], end='\t', file=dataFile) #first thing printed on each line of dataFile
     
