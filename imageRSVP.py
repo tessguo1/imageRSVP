@@ -288,8 +288,8 @@ possibleCue1positions =  np.array([2,3,4])
 possibleCue2lags = np.array([2])
 for cue1pos in possibleCue1positions:
    for cue2lag in possibleCue2lags:
-      for critDistractorArousing in [True, False]:
-          for otherItemsArousing in [True, False]:
+      for critDistractorArousing in [True,True]: #[True, False]:
+          for otherItemsArousing in [False, False]:
                 stimList.append( {'cue1pos':cue1pos, 'cue2lag':cue2lag, 'critDistractorArousing':critDistractorArousing, 'otherItemsArousing':otherItemsArousing } )
 #Martini E2 and also AB experiments used 400 trials total, with breaks between every 100 trials
 

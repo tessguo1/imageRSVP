@@ -31,7 +31,7 @@ def drawChoiceArrayAndCollectResponse(targetImage,lineupImages,lineupImageIndexe
     print('lineupImageIndexes-',lineupImageIndexes, 'numInArray=',numInArray)
     
     respondedYet = False
-    for i in xrange(numInArray):
+    for i in range(numInArray):
         x= coords[i][0]
         y = coords[i][1]
         lineupImages[i].setPos((x,y))
@@ -89,7 +89,7 @@ def drawChoiceArrayAndCollectResponseWithFnames(targetFileName, foilPath,foilFil
     print('numInArray=',numInArray)
     
     respondedYet = False
-    for i in xrange(numInArray):
+    for i in range(numInArray):
         x= coords[i][0]
         y = coords[i][1]
         fname = allFnames[i]
